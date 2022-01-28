@@ -19,7 +19,7 @@ bot = telebot.TeleBot(vars.BOT_TOKEN, parse_mode=None)
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     # create user if no exist
-    user.state = "expecting_name"
+    # user.state = "expecting_name"
     bot.reply_to(message, "Добро пожаловать, как мне вас называть?")
     print(message.chat.id)
 
@@ -29,21 +29,12 @@ def save_name(message):
     bot.reply_to(message, message.text)
 
 
-# or add KeyboardButton one row at a time:
-# markup = types.ReplyKeyboardMarkup()
-# itembtna = types.KeyboardButton('a')
-# itembtnv = types.KeyboardButton('v')
-# itembtnc = types.KeyboardButton('c')
-# itembtnd = types.KeyboardButton('d')
-# itembtne = types.KeyboardButton('e')
-# markup.row(itembtna, itembtnv)
-# markup.row(itembtnc, itembtnd, itembtne)
-#    bot.reply_to(message, message.text, reply_markup=markup)
+
 
 
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
-    bot.reply_to(message, message.text)
+    bot.reply_to(message, message.text, reply_markup=markup)
 
 
 @bot.message_handler(commands=['help'])
@@ -75,19 +66,23 @@ def command_handle_document(message):
 def default_command(message):
     bot.send_message(message.chat.id, "This is the default command handler.")
 
-
+# Launch bot
 bot.infinity_polling()
 
-tempp = 0
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}', tempp)  # Press ⌘F8 to toggle the breakpoint.
 
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/ изменения тест2 ветка test 2 changesgit
+
+
+# or add KeyboardButton one row at a time:
+# markup = types.ReplyKeyboardMarkup()
+# itembtna = types.KeyboardButton('/start')
+# itembtnv = types.KeyboardButton('/help')
+# itembtnc = types.KeyboardButton('c')
+# itembtnd = types.KeyboardButton('d')
+# itembtne = types.KeyboardButton('e')
+# markup.row(itembtna, itembtnv)
+# markup.row(itembtnc, itembtnd, itembtne)
+   # bot.reply_to(message, message.text, reply_markup=markup)
