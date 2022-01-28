@@ -18,17 +18,17 @@ def user_exists(self):
     else:
         return False
 
+session = Session()
 
 # Команда /start и запрос имени для нового пользователя
 @bot.message_handler(commands=['s'])
 def send_welcome(message):
     print(message.chat.id)
     # - check users
-    session = Session()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     print(db_user)
     if db_user is not None:
-        bot.reply_to(message, f"s-Добро пожаловать, {db_user.name}!")
+        bot.reply_to(message, f"Добро пожаловать, {db_user.name}!")
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
         itembtn = types.KeyboardButton('/c')
         markup.row(itembtn)
@@ -36,14 +36,13 @@ def send_welcome(message):
         # db_user.current_state = "no_need_name"
         print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
     else:
-        bot.reply_to(message, "S-Добро пожаловать, как мне вас называть?")
+        bot.reply_to(message, "Добро пожаловать, как мне вас называть?")
         new_user = User()
         new_user.chat_id = message.chat.id
         new_user.current_state = "need_name"
         print(f'{new_user.id} ,{new_user.name} , {new_user.chat_id}, {new_user.current_state}')
         session.add(new_user)
     session.commit()
-    session.close()
 
 
 # Приветствие /curr, показать все пары крипты
@@ -51,7 +50,6 @@ def send_welcome(message):
 def show_currencies(message):
     print(message.chat.id)
     # - check users
-    session = Session()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     currs = session.query(Cryptocurrency).all()
     print(currs)
@@ -77,20 +75,19 @@ def show_currencies(message):
             itembtnyes = types.KeyboardButton('Yes')
             itembtnno = types.KeyboardButton('No')
             markup.row(itembtnyes, itembtnno)
-            bot.send_message(message.chat.id, f"c-{db_user.name}, установить любимую валюту?", reply_markup=markup)
+            bot.send_message(message.chat.id, f"{db_user.name}, установить любимую валюту?", reply_markup=markup)
             db_user.current_state = "check_fav_curr"
             print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
     else:
         bot.send_message(message.chat.id, "No cryptocurrencies")
     session.commit()
-    session.close()
+
 
 # Удаление из базы своего пользователя
 @bot.message_handler(commands=['d'])
 def user_removal(message):
     print(message.chat.id)
     # - check users
-    session = Session()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     print(db_user)
     if db_user is not None:
@@ -104,8 +101,6 @@ def user_removal(message):
     else:
         bot.reply_to(message, "Пользователя не суещствует")
     session.commit()
-    session.close()
-
 
 
 # Отвечаем на все сообщения в зависимости от current_state
@@ -115,7 +110,6 @@ def echo_all(message):
     if message.text in ("Hi", "hi", "Привет", "привет"):
         bot.send_message(message.from_user.id, "Hi, I'm a crypto bot!")
     # - check users
-    session = Session()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     print(db_user)
     if db_user is not None:
@@ -123,6 +117,7 @@ def echo_all(message):
             case "need_name": # текст следующего сообщения записать в имя пользователя User.name
                 db_user.current_state = ""
                 db_user.name = message.text
+                bot.send_message(message.chat.id, f"{db_user.name}, приятно познакомиться! Я Криптобот =)")
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
             case "check_fav_curr": # обработка ответа на вопрос, установить ли любимую валюту
                 if message.text == "Yes":
@@ -130,28 +125,38 @@ def echo_all(message):
                     db_user.current_state = "need_set_fav_curr"
                 else:
                     db_user.current_state = ""
+                    bot.send_message(message.chat.id, "Понял, пока ничего менять не будем")
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
             case "need_set_fav_curr": # текст следующего сообщения установить как любимую валюту пользователья fav_currency
                 db_user.current_state = ""
-                curr_name = session.query(Cryptocurrency.name).filter(Cryptocurrency.name == message.text).distinct().first()
-                if message.text == curr_name:
+                curr_name = session.query(Cryptocurrency).filter(Cryptocurrency.name == message.text).distinct().first()
+                print(curr_name)
+                if curr_name is not None:
                     db_user.fav_currency = curr_name
+                    print(db_user.fav_currency)
+                    bot.send_message(message.chat.id, f"Любимая валюта {curr_name.name} установлена")
+                else:
+                    bot.send_message(message.chat.id, "Введите имя валюты из доступного списка")
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}, {db_user.fav_currency}')
             case "need_check_user_removal": # обработка ответа на вопрос, нужно ли удалять пользователя
                 db_user.current_state = ""
                 if message.text == "Yes":
                     session.delete(db_user)
                     bot.send_message(message.chat.id, "Ваши данные успешно удалены!")
+                else:
+                    bot.send_message(message.chat.id, "Рад, что вы с нами!")
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
             case _:
+                bot.send_message(message.chat.id, "Пожалуйста, введите команду /start или /curr")
                 print("Case in match code not found")
     else:
         new_user = User()
         new_user.chat_id = message.chat.id
-        new_user.current_state = "need_name"
+        new_user.current_state = "begin"
+        bot.send_message(message.chat.id, "Пожалуйста, введите команду /start или /curr")
         print(f'{new_user.id} ,{new_user.name} , {new_user.chat_id}, {new_user.current_state}')
     session.commit()
-    session.close()
+
 
 
 
@@ -159,6 +164,7 @@ def echo_all(message):
 # Launch bot
 bot.infinity_polling()
 
+session.close()
 
 
 
