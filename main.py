@@ -8,33 +8,162 @@
 import telebot
 from telebot import types
 import vars
+from db_bot import Pair, Session, User, Cryptocurrency
 
 bot = telebot.TeleBot(vars.BOT_TOKEN, parse_mode=None)
 
-# You can set parse_mode by default. HTML or MARKDOWN
-# TODO удалить токен перед заливкой онлайн
 
-
-# Приветствие
-@bot.message_handler(commands=['start'])
+# Приветствие /start, запрос имени для нового пользователя
+@bot.message_handler(commands=['s'])
 def send_welcome(message):
-    # create user if no exist
-    # user.state = "expecting_name"
-    bot.reply_to(message, "Добро пожаловать, как мне вас называть?")
     print(message.chat.id)
+    # - check users
+    session = Session()
+    db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
+    print(db_user)
+    if db_user is not None:
+        bot.reply_to(message, f"s-Добро пожаловать, {db_user.name}!")
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+        itembtn = types.KeyboardButton('/c')
+        markup.row(itembtn)
+        bot.send_message(message.chat.id, f"Если хотите просмотреть список всех валют, то нажмите /c !", reply_markup=markup)
+        # db_user.current_state = "no_need_name"
+        print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+    else:
+        bot.reply_to(message, "S-Добро пожаловать, как мне вас называть?")
+        new_user = User()
+        new_user.chat_id = message.chat.id
+        new_user.current_state = "need_name"
+        print(f'{new_user.id} ,{new_user.name} , {new_user.chat_id}, {new_user.current_state}')
+        session.add(new_user)
+    session.commit()
+    session.close()
 
 
+# Приветствие /curr, показать все пары крипты
+@bot.message_handler(commands=['c'])
+def show_currencies(message):
+    print(message.chat.id)
+    # - check users
+    session = Session()
+    db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
+    currs = session.query(Cryptocurrency).all()
+    print(currs)
+    if currs is not None:
+        bot.send_message(message.chat.id, f"c-Вот список валют, {db_user.name}!")
+        # print all curr
+        text_to_send = []
+        for cur in currs:
+            print(f'{cur.name}, {cur.id}')
+            text_to_send.append(f'{cur.name}')
+        # db_user.current_state = "no_need_name"
+        print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+        print(text_to_send)
+        bot.send_message(message.chat.id, ', '.join(text_to_send))
+        # спрашиваем, хочет ли пользователь установить любимую валюту
+        print(db_user)
+        if db_user is not None:
+            markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+            itembtnyes = types.KeyboardButton('Yes')
+            itembtnno = types.KeyboardButton('No')
+            markup.row(itembtnyes, itembtnno)
+            bot.send_message(message.chat.id, f"c-{db_user.name}, установить любимую валюту?", reply_markup=markup)
+            db_user.current_state = "check_fav_curr"
+            print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+    else:
+        bot.send_message(message.chat.id, "No cryptocurrencies")
+    session.commit()
+    session.close()
+
+# Удаление из базы своего пользователя
+@bot.message_handler(commands=['d'])
+def user_removal(message):
+    print(message.chat.id)
+    # - check users
+    session = Session()
+    db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
+    print(db_user)
+    if db_user is not None:
+        db_user.current_state = "need_check_user_removal"
+        markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
+        itembtnyes = types.KeyboardButton('Yes')
+        itembtnno = types.KeyboardButton('No')
+        markup.row(itembtnyes, itembtnno)
+        bot.send_message(message.chat.id, f"{db_user.name}, вы точно хотите удалить все свои данные?", reply_markup=markup)
+        print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+    else:
+        bot.reply_to(message, "Пользователя не суещствует")
+    session.commit()
+    session.close()
+
+
+
+# Отвечаем на все сообщения в зависимости от current_state
+@bot.message_handler(func=lambda message: True)
+def echo_all(message):
+    print(message.chat.id)
+    # - check users
+    session = Session()
+    db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
+    print(db_user)
+    if db_user is not None:
+        match db_user.current_state:
+            case "need_name":
+                db_user.current_state = ""
+                db_user.name = message.text
+                print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+            case "check_fav_curr":
+                db_user.current_state = ""
+                if message.text == "Yes":
+                    bot.send_message(message.chat.id, "Введите название любимой валюты")
+                print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+            case "need_check_user_removal":
+                db_user.current_state = ""
+                if message.text == "Yes":
+                    session.delete(db_user)
+                    bot.send_message(message.chat.id, "Ваши данные успешно удалены!")
+                print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+            case _:
+                print("Code not found")
+    else:
+        new_user = User()
+        new_user.chat_id = message.chat.id
+        new_user.current_state = "need_name"
+        print(f'{new_user.id} ,{new_user.name} , {new_user.chat_id}, {new_user.current_state}')
+    session.commit()
+    session.close()
+
+
+
+
+
+
+
+
+
+
+# Launch bot
+bot.infinity_polling()
+
+
+
+
+
+'''
 @bot.message_handler(func=lambda message: True)
 def save_name(message):
     bot.reply_to(message, message.text)
 
 
+# @bot.message_handler(func=lambda message: True)
+# def echo_all(message):
+#     markup = types.ReplyKeyboardRemove(selective=False)
+#     bot.reply_to(message, message.text, reply_markup=markup)
 
 
 
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, message.text, reply_markup=markup)
+
+
 
 
 @bot.message_handler(commands=['help'])
@@ -66,23 +195,18 @@ def command_handle_document(message):
 def default_command(message):
     bot.send_message(message.chat.id, "This is the default command handler.")
 
-# Launch bot
-bot.infinity_polling()
 
 
-
+# @bot.message_handler(func=lambda message: True)
+# def del_markup(message):
+#     markup = types.ReplyKeyboardRemove(selective=False)
+#     bot.send_message(message.chat.id, 'Привет', reply_markup=markup)
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/ изменения тест2 ветка test 2 changesgit
 
 
 # or add KeyboardButton one row at a time:
-# markup = types.ReplyKeyboardMarkup()
-# itembtna = types.KeyboardButton('/start')
-# itembtnv = types.KeyboardButton('/help')
-# itembtnc = types.KeyboardButton('c')
-# itembtnd = types.KeyboardButton('d')
-# itembtne = types.KeyboardButton('e')
-# markup.row(itembtna, itembtnv)
-# markup.row(itembtnc, itembtnd, itembtne)
-   # bot.reply_to(message, message.text, reply_markup=markup)
+'''
+
+

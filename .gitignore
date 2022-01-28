@@ -4,7 +4,7 @@ vars.py
 .DS_Store
 __pycache__/
 cryptodb.db
-db_bot.py
+db_creation.py
 sessions.py
 test.py
 testbot.py
