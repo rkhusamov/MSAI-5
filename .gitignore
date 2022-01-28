@@ -1,2 +1,9 @@
 .venv
 .idea
+vars.py
+.DS_Store
+__pycache__/
+cryptodb.db
+sessions.py
+test.py
+testbot.py
