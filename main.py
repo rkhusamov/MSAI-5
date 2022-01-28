@@ -12,8 +12,14 @@ from db_bot import Pair, Session, User, Cryptocurrency
 
 bot = telebot.TeleBot(vars.BOT_TOKEN, parse_mode=None)
 
+def user_exists(self):
+    if self is not None:
+        return True
+    else:
+        return False
 
-# Приветствие /start, запрос имени для нового пользователя
+
+# Команда /start и запрос имени для нового пользователя
 @bot.message_handler(commands=['s'])
 def send_welcome(message):
     print(message.chat.id)
@@ -50,14 +56,18 @@ def show_currencies(message):
     currs = session.query(Cryptocurrency).all()
     print(currs)
     if currs is not None:
-        bot.send_message(message.chat.id, f"c-Вот список валют, {db_user.name}!")
+        if db_user is not None:
+            name = db_user.name
+            print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
+        else:
+            name = "уважаемый пользователь"
+        bot.send_message(message.chat.id, f"Вот список валют, {name}!")
         # print all curr
         text_to_send = []
         for cur in currs:
             print(f'{cur.name}, {cur.id}')
             text_to_send.append(f'{cur.name}')
         # db_user.current_state = "no_need_name"
-        print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
         print(text_to_send)
         bot.send_message(message.chat.id, ', '.join(text_to_send))
         # спрашиваем, хочет ли пользователь установить любимую валюту
@@ -102,29 +112,39 @@ def user_removal(message):
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     print(message.chat.id)
+    if message.text in ("Hi", "hi", "Привет", "привет"):
+        bot.send_message(message.from_user.id, "Hi, I'm a crypto bot!")
     # - check users
     session = Session()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     print(db_user)
     if db_user is not None:
         match db_user.current_state:
-            case "need_name":
+            case "need_name": # текст следующего сообщения записать в имя пользователя User.name
                 db_user.current_state = ""
                 db_user.name = message.text
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
-            case "check_fav_curr":
-                db_user.current_state = ""
+            case "check_fav_curr": # обработка ответа на вопрос, установить ли любимую валюту
                 if message.text == "Yes":
                     bot.send_message(message.chat.id, "Введите название любимой валюты")
+                    db_user.current_state = "need_set_fav_curr"
+                else:
+                    db_user.current_state = ""
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
-            case "need_check_user_removal":
+            case "need_set_fav_curr": # текст следующего сообщения установить как любимую валюту пользователья fav_currency
+                db_user.current_state = ""
+                curr_name = session.query(Cryptocurrency.name).filter(Cryptocurrency.name == message.text).distinct().first()
+                if message.text == curr_name:
+                    db_user.fav_currency = curr_name
+                print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}, {db_user.fav_currency}')
+            case "need_check_user_removal": # обработка ответа на вопрос, нужно ли удалять пользователя
                 db_user.current_state = ""
                 if message.text == "Yes":
                     session.delete(db_user)
                     bot.send_message(message.chat.id, "Ваши данные успешно удалены!")
                 print(f'{db_user.id} ,{db_user.name} , {db_user.chat_id}, {db_user.current_state}')
             case _:
-                print("Code not found")
+                print("Case in match code not found")
     else:
         new_user = User()
         new_user.chat_id = message.chat.id
@@ -132,12 +152,6 @@ def echo_all(message):
         print(f'{new_user.id} ,{new_user.name} , {new_user.chat_id}, {new_user.current_state}')
     session.commit()
     session.close()
-
-
-
-
-
-
 
 
 

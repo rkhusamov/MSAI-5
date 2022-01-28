@@ -40,10 +40,11 @@ class User(Base):
     name = Column(String)
     chat_id = Column(String)
     current_state = Column(String)
+    fav_currency_id = Column(Integer, ForeignKey('cryptocurrencies.id'))
+    fav_currency = relationship("Cryptocurrency", foreign_keys=[fav_currency_id])
 
 # 2 - generate database schema
 Base.metadata.create_all(engine)
-
 
 # 3 - create a new session
 session = Session()
@@ -75,6 +76,7 @@ user_2 = User()
 user_2.chat_id = "0000"
 user_2.name = "Zhenya"
 user_2.current_state = "begin"
+user_2.fav_currency = usdt
 
 user_3 = User()
 user_3.chat_id = "9231139"
@@ -88,9 +90,9 @@ user_3.current_state = "begin"
 # session.add(eth)
 # session.add(usdt)
 # session.add(btc_eth)
-# session.add (user_1)
-# session.add (user_2)
-# session.add (user_3)
+# session.add(user_1)
+# session.add(user_2)
+# session.add(user_3)
 
 # Base.metadata.drop_all(bind=engine)
 # 10 - commit and close session
