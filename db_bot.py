@@ -62,6 +62,10 @@ usdt = Cryptocurrency()
 usdt.name = "Tether"
 usdt.ticker = "USDT"
 
+xrp = Cryptocurrency()
+xrp.name = "Ripple"
+xrp.ticker = "XRP"
+
 btc_eth = Pair()
 btc_eth.name = "Btc_Eth"
 btc_eth.currency_1 = btc
@@ -89,6 +93,7 @@ user_3.current_state = "begin"
 # session.add(btc)
 # session.add(eth)
 # session.add(usdt)
+# session.add(xrp)
 # session.add(btc_eth)
 # session.add(user_1)
 # session.add(user_2)
