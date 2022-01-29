@@ -97,7 +97,8 @@ def echo_all(message):
                     db_user.current_state = "need_set_fav_curr"
                 else:
                     db_user.current_state = ""
-                    bot.send_message(message.chat.id, "Понял, пока ничего менять не будем")
+                    markup = types.ReplyKeyboardRemove()
+                    bot.send_message(message.chat.id, "Понял, пока ничего менять не будем", reply_markup=markup)
             case "need_set_fav_curr": # текст следующего сообщения установить как любимую валюту пользователья fav_currency
                 db_user.current_state = ""
                 curr_name = session.query(Cryptocurrency).filter(Cryptocurrency.name == message.text).distinct().first()
