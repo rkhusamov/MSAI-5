@@ -59,6 +59,15 @@ class User(Base):
     current_state = Column(String)
     fav_currency_id = Column(Integer, ForeignKey('cryptocurrencies.id'))
     fav_currency = relationship("Cryptocurrency", foreign_keys=[fav_currency_id])
+    has_smart_contract = Column(Boolean)
+    adoption_id = Column(Integer, ForeignKey('adoptions.id'))
+    adoption = relationship("Adoption", foreign_keys=[adoption_id])
+    consensus_id = Column(Integer, ForeignKey('consensuses.id'))
+    consensus = relationship("Сonsensus", foreign_keys=[consensus_id])
+
+
+
+
 
 # 2 - generate database schema
 Base.metadata.create_all(engine)
