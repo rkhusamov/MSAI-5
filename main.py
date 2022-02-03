@@ -18,14 +18,14 @@ def send_welcome(message):
     # get user
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     if db_user is not None: # if user exists
-        bot.reply_to(message, f"Добро пожаловать, {db_user.name}!")
+        bot.reply_to(message, f"Welcome, {db_user.name}!")
         markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
         itembtn1 = types.KeyboardButton('/curr')
         itembtn2 = types.KeyboardButton('Skip')
         markup.row(itembtn1, itembtn2)
-        bot.send_message(message.chat.id, f"Если хотите просмотреть список всех валют, то нажмите /curr !", reply_markup=markup)
+        bot.send_message(message.chat.id, f"For list of all currencies use /curr !", reply_markup=markup)
     else: # if no user exists
-        bot.reply_to(message, "Добро пожаловать, как мне вас называть?")
+        bot.reply_to(message, "Nice to meet you! How could I call you?")
         new_user = User()
         new_user.chat_id = message.chat.id
         new_user.current_state = "need_name"
@@ -39,13 +39,13 @@ def show_currencies(message):
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     currs = session.query(Cryptocurrency).all()
     if (db_user is not None) and (db_user.fav_currency is not None):
-        bot.send_message(message.chat.id, f"Ваша любимая валюта - {db_user.fav_currency.name}")
+        bot.send_message(message.chat.id, f"Your favourite currency is {db_user.fav_currency.name}")
     if currs is not None:
         if db_user is not None:
             name = db_user.name
         else:
-            name = "Уважаемый пользователь"
-        bot.send_message(message.chat.id, f"{name}, вот список валют:")
+            name = "Valued customer"
+        bot.send_message(message.chat.id, f"{name}, here is a list of currencies:")
         text_to_send = []
         for cur in currs:
             text_to_send.append(f'{cur.name}')
@@ -56,7 +56,7 @@ def show_currencies(message):
             itembtnyes = types.KeyboardButton('Yes')
             itembtnno = types.KeyboardButton('No')
             markup.row(itembtnyes, itembtnno)
-            bot.send_message(message.chat.id, f"Установить любимую валюту?", reply_markup=markup)
+            bot.send_message(message.chat.id, f"Do you want to set your favourite currency?", reply_markup=markup)
             db_user.current_state = "check_fav_curr"
     else:
         bot.send_message(message.chat.id, "No cryptocurrencies")
@@ -73,17 +73,18 @@ def user_removal(message):
         itembtnyes = types.KeyboardButton('Yes')
         itembtnno = types.KeyboardButton('No')
         markup.row(itembtnyes, itembtnno)
-        bot.send_message(message.chat.id, f"{db_user.name}, вы точно хотите удалить все свои данные?", reply_markup=markup)
+        bot.send_message(message.chat.id, f"{db_user.name}, are you sure to remove your data?", reply_markup=markup)
     else:
-        bot.reply_to(message, "Пользователя не суещствует")
+        bot.reply_to(message, "User does not exits or I don't know him")
     session.commit()
 
 
 # Выбор криптовалюты пользователем /сhoose
 @bot.message_handler(commands=['choose'])
 def choose_crypt(message):
+    db_user_count = session.query(User).filter(User.chat_id == message.chat.id).count()
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
-    if db_user is not None:
+    if db_user_count > 0:
         db_user.current_state = "need_save_consensus"
         bot.send_message(message.chat.id, f"{db_user.name}, I could help you to choose a Crypto!")
         bot.send_message(message.chat.id, "We have these types of consensus:")
@@ -103,23 +104,23 @@ def choose_crypt(message):
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     if message.text in ("Hi", "hi", "Привет", "привет"):
-        bot.send_message(message.from_user.id, "Привет, я — Криптобот =)")
+        bot.send_message(message.from_user.id, "Hi, I am Cryptobot =)")
     db_user = session.query(User).filter(User.chat_id == message.chat.id).first()
     if db_user is not None:
         match db_user.current_state:
             case "need_name": # текст следующего сообщения записать в имя пользователя User.name
                 db_user.current_state = ""
                 db_user.name = message.text
-                bot.send_message(message.chat.id, f"{db_user.name}, приятно познакомиться! Я Криптобот =)")
-                bot.send_message(message.chat.id, "Если хотите просмотреть список всех валют, то нажмите /curr !")
+                bot.send_message(message.chat.id, f"{db_user.name}, nice to meet you! I am Cryptobot =)")
+                bot.send_message(message.chat.id, "To show the list of all currencies use /curr !")
             case "check_fav_curr": # обработка ответа на вопрос, установить ли любимую валюту
                 if message.text == "Yes":
-                    bot.send_message(message.chat.id, "Введите название любимой валюты")
+                    bot.send_message(message.chat.id, "Add name of a favourite currency")
                     db_user.current_state = "need_set_fav_curr"
                 else:
                     db_user.current_state = ""
                     markup = types.ReplyKeyboardRemove()
-                    bot.send_message(message.chat.id, "Понял, пока ничего менять не будем", reply_markup=markup)
+                    bot.send_message(message.chat.id, "Ok, nothing to change. Please, use /start, /curr or /choose", reply_markup=markup)
             case "need_set_fav_curr": # текст следующего сообщения установить как любимую валюту пользователья fav_currency
                 db_user.current_state = ""
                 curr_name = session.query(Cryptocurrency).filter(Cryptocurrency.name == message.text).distinct().first()
@@ -128,16 +129,16 @@ def echo_all(message):
                     markup = types.ReplyKeyboardMarkup(one_time_keyboard=True)
                     itembtn = types.KeyboardButton('Wow!')
                     markup.row(itembtn)
-                    bot.send_message(message.chat.id, f"Любимая валюта {curr_name.name} установлена", reply_markup=markup)
+                    bot.send_message(message.chat.id, f"Favourite currency {curr_name.name} saved", reply_markup=markup)
                 else:
-                    bot.send_message(message.chat.id, "У меня нет такой валюты. Попробуйте ещё раз командой /curr")
+                    bot.send_message(message.chat.id, "I have no this currency. Please, try again by /curr")
             case "need_check_user_removal": # обработка ответа на вопрос, нужно ли удалять пользователя
                 db_user.current_state = ""
                 if message.text == "Yes":
                     session.delete(db_user)
-                    bot.send_message(message.chat.id, "Ваши данные успешно удалены!")
+                    bot.send_message(message.chat.id, "I have deleted your data!")
                 else:
-                    bot.send_message(message.chat.id, "Рад, что вы с нами!")
+                    bot.send_message(message.chat.id, "Happy we are together!")
             case "need_save_consensus":  # обработка ответа по выбору консенсуса
                 db_user.current_state = ""
                 consensuses = session.query(Сonsensus).all()
@@ -256,7 +257,7 @@ def echo_all(message):
         new_user.chat_id = message.chat.id
         new_user.current_state = "begin"
         markup = types.ReplyKeyboardRemove()
-        bot.send_message(message.chat.id, "Пожалуйста, введите команду /start или /curr", reply_markup=markup)
+        bot.send_message(message.chat.id, "Please, use /start, /curr or /choose", reply_markup=markup)
     session.commit()
 
 # Launch bot
